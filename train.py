@@ -7,17 +7,17 @@ import torch
 import torch.backends.cudnn as cudnn
 from networks.vit_seg_modeling import VisionTransformer as ViT_seg
 from networks.vit_seg_modeling import CONFIGS as CONFIGS_ViT_seg
-from trainer import trainer_synapse
+from trainer import trainer_synapse, trainer_tnbc
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--root_path', type=str,
-                    default='../data/Synapse/train_npz', help='root dir for data')
+                    default='./data/tnbc', help='root dir for data')
 parser.add_argument('--dataset', type=str,
-                    default='Synapse', help='experiment_name')
+                    default='TNBC', help='experiment_name')
 parser.add_argument('--list_dir', type=str,
                     default='./lists/lists_Synapse', help='list dir')
 parser.add_argument('--num_classes', type=int,
-                    default=9, help='output channel of network')
+                    default=2, help='output channel of network')
 parser.add_argument('--max_iterations', type=int,
                     default=30000, help='maximum epoch number to train')
 parser.add_argument('--max_epochs', type=int,
@@ -30,13 +30,13 @@ parser.add_argument('--deterministic', type=int,  default=1,
 parser.add_argument('--base_lr', type=float,  default=0.01,
                     help='segmentation network learning rate')
 parser.add_argument('--img_size', type=int,
-                    default=224, help='input patch size of network input')
+                    default=512, help='input patch size of network input')
 parser.add_argument('--seed', type=int,
                     default=1234, help='random seed')
 parser.add_argument('--n_skip', type=int,
                     default=3, help='using number of skip-connect, default is num')
 parser.add_argument('--vit_name', type=str,
-                    default='R50-ViT-B_16', help='select one vit model')
+                    default='ViT-B_16', help='select one vit model')
 parser.add_argument('--vit_patches_size', type=int,
                     default=16, help='vit_patches_size, default is 16')
 args = parser.parse_args()
@@ -61,6 +61,10 @@ if __name__ == "__main__":
             'list_dir': './lists/lists_Synapse',
             'num_classes': 9,
         },
+        'TNBC': {
+            'root_path': args.root_path,
+            'num_classes': 2,  # 2 classes: background & foreground (cell)
+        },
     }
     args.num_classes = dataset_config[dataset_name]['num_classes']
     args.root_path = dataset_config[dataset_name]['root_path']
@@ -84,10 +88,20 @@ if __name__ == "__main__":
     config_vit = CONFIGS_ViT_seg[args.vit_name]
     config_vit.n_classes = args.num_classes
     config_vit.n_skip = args.n_skip
-    if args.vit_name.find('R50') != -1:
-        config_vit.patches.grid = (int(args.img_size / args.vit_patches_size), int(args.img_size / args.vit_patches_size))
-    net = ViT_seg(config_vit, img_size=args.img_size, num_classes=config_vit.n_classes).cuda()
-    net.load_from(weights=np.load(config_vit.pretrained_path))
+    if args.img_size != 224:
+        temp = args.img_size
+        args.img_size = 224
+        if args.vit_name.find('R50') != -1:
+            config_vit.patches.grid = (int(args.img_size / args.vit_patches_size), int(args.img_size / args.vit_patches_size))
+        net = ViT_seg(config_vit, img_size=args.img_size, num_classes=config_vit.n_classes).cuda()
+        net.load_from(weights=np.load(config_vit.pretrained_path))
+        args.img_size = temp
+        net.adjust_embedding(args.img_size)
+    else:
+        if args.vit_name.find('R50') != -1:
+            config_vit.patches.grid = (int(args.img_size / args.vit_patches_size), int(args.img_size / args.vit_patches_size))
+        net = ViT_seg(config_vit, img_size=args.img_size, num_classes=config_vit.n_classes).cuda()
+        net.load_from(weights=np.load(config_vit.pretrained_path))
 
-    trainer = {'Synapse': trainer_synapse,}
+    trainer = {'Synapse': trainer_synapse, 'TNBC': trainer_tnbc}
     trainer[dataset_name](args, net, snapshot_path)

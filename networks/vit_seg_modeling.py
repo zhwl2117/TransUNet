@@ -249,11 +249,15 @@ class Transformer(nn.Module):
         super(Transformer, self).__init__()
         self.embeddings = Embeddings(config, img_size=img_size)
         self.encoder = Encoder(config, vis)
+        self.config = config
 
     def forward(self, input_ids):
         embedding_output, features = self.embeddings(input_ids)
         encoded, attn_weights = self.encoder(embedding_output)  # (B, n_patch, hidden)
         return encoded, attn_weights, features
+
+    def adjust_embedding(self, img_size):
+        self.embeddings = Embeddings(self.config, img_size)
 
 
 class Conv2dReLU(nn.Sequential):
@@ -381,6 +385,9 @@ class VisionTransformer(nn.Module):
             kernel_size=3,
         )
         self.config = config
+
+    def adjust_embedding(self, img_size):
+        self.transformer.adjust_embedding(img_size)
 
     def forward(self, x):
         if x.size()[1] == 1:
