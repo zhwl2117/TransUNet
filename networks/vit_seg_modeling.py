@@ -257,7 +257,7 @@ class Transformer(nn.Module):
         return encoded, attn_weights, features
 
     def adjust_embedding(self, img_size):
-        self.embeddings = Embeddings(self.config, img_size)
+        self.embeddings = Embeddings(self.config, img_size).cuda()
 
 
 class Conv2dReLU(nn.Sequential):

@@ -23,7 +23,7 @@ parser.add_argument('--max_iterations', type=int,
 parser.add_argument('--max_epochs', type=int,
                     default=150, help='maximum epoch number to train')
 parser.add_argument('--batch_size', type=int,
-                    default=24, help='batch_size per gpu')
+                    default=16, help='batch_size per gpu')
 parser.add_argument('--n_gpu', type=int, default=1, help='total gpu')
 parser.add_argument('--deterministic', type=int,  default=1,
                     help='whether use deterministic training')
@@ -36,7 +36,7 @@ parser.add_argument('--seed', type=int,
 parser.add_argument('--n_skip', type=int,
                     default=3, help='using number of skip-connect, default is num')
 parser.add_argument('--vit_name', type=str,
-                    default='ViT-B_16', help='select one vit model')
+                    default='R50-ViT-B_16', help='select one vit model')
 parser.add_argument('--vit_patches_size', type=int,
                     default=16, help='vit_patches_size, default is 16')
 args = parser.parse_args()
@@ -64,6 +64,7 @@ if __name__ == "__main__":
         'TNBC': {
             'root_path': args.root_path,
             'num_classes': 2,  # 2 classes: background & foreground (cell)
+            'list_dir': './lists/lists_Synapse',  # useless, to coordinate with Synapse
         },
     }
     args.num_classes = dataset_config[dataset_name]['num_classes']
@@ -71,7 +72,7 @@ if __name__ == "__main__":
     args.list_dir = dataset_config[dataset_name]['list_dir']
     args.is_pretrain = True
     args.exp = 'TU_' + dataset_name + str(args.img_size)
-    snapshot_path = "../model/{}/{}".format(args.exp, 'TU')
+    snapshot_path = "./model/{}/{}".format(args.exp, 'TU')
     snapshot_path = snapshot_path + '_pretrain' if args.is_pretrain else snapshot_path
     snapshot_path += '_' + args.vit_name
     snapshot_path = snapshot_path + '_skip' + str(args.n_skip)
